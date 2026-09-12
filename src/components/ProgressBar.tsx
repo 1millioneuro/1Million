@@ -32,6 +32,12 @@ export function ProgressBar({ pixelsSold }: Props) {
       <div className="progress-track" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
         <div className="progress-fill" style={{ width: `${Math.max(pct, pct > 0 ? 0.3 : 0)}%` }} />
       </div>
+      {pixelsSold === 0 && (
+        <div className="first-sale-cta" role="status">
+          <strong>Be the first pixel on the wall</strong>
+          <span>0 sold — claim the first square for ~€1 in SOL</span>
+        </div>
+      )}
     </div>
   )
 }

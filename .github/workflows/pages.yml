@@ -24,7 +24,12 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      # Vite production mode also loads committed `.env.production`.
+      # Pin the same values here so Pages never ships the demo-mode banner.
       - run: npm run build
+        env:
+          VITE_TREASURY_WALLET: GXoU9jG9G4iGrquMLfyMvUuzW6Rvn2t5nGSC1UWg5y57
+          VITE_SOL_PER_PIXEL: '0.0115'
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

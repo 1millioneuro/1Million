@@ -1,5 +1,4 @@
 import {
-  Connection,
   PublicKey,
   SystemProgram,
   Transaction,
@@ -10,19 +9,17 @@ import {
 import bs58 from 'bs58'
 import { Buffer } from 'buffer'
 import {
-  SOLANA_RPC,
   TREASURY_WALLET,
   MEMO_PROGRAM_ID,
   SOL_PER_PIXEL,
   isTreasuryConfigured,
 } from '../config'
 import { encodeMemo, decodeMemo } from './memo'
-import { colorFromSeed } from './colors'
+import { colorFromSeed, DEFAULT_PIXEL_COLOR } from './colors'
+import { getConnection, withRpcFallback } from './rpc'
 import type { Purchase, Selection } from '../types'
 
-export function getConnection(): Connection {
-  return new Connection(SOLANA_RPC, 'confirmed')
-}
+export { getConnection }
 
 export function pixelsInSelection(sel: Selection): number {
   return Math.max(0, sel.w) * Math.max(0, sel.h)
@@ -41,19 +38,20 @@ export async function buildPurchaseTransaction(
   sel: Selection,
   name: string,
   url: string,
+  color: string = DEFAULT_PIXEL_COLOR,
 ): Promise<Transaction> {
   if (!isTreasuryConfigured) {
     throw new Error(
-      'Treasury-Wallet ist nicht konfiguriert. Bitte VITE_TREASURY_WALLET setzen.',
+      'Treasury wallet is not configured. Set VITE_TREASURY_WALLET.',
     )
   }
   const treasury = new PublicKey(TREASURY_WALLET)
   const lamports = Math.round(solForSelection(sel) * LAMPORTS_PER_SOL)
   if (lamports <= 0) {
-    throw new Error('Auswahl ist leer.')
+    throw new Error('Selection is empty.')
   }
 
-  const memo = encodeMemo(sel, name, url)
+  const memo = encodeMemo(sel, name, url, color)
   const tx = new Transaction().add(
     SystemProgram.transfer({
       fromPubkey: from,
@@ -67,9 +65,9 @@ export async function buildPurchaseTransaction(
     }),
   )
 
-  const connection = getConnection()
-  const { blockhash, lastValidBlockHeight } =
-    await connection.getLatestBlockhash()
+  const { blockhash, lastValidBlockHeight } = await withRpcFallback((c) =>
+    c.getLatestBlockhash(),
+  )
   tx.recentBlockhash = blockhash
   tx.lastValidBlockHeight = lastValidBlockHeight
   tx.feePayer = from
@@ -83,21 +81,22 @@ export async function buildPurchaseTransaction(
 export async function fetchPurchases(limit = 200): Promise<Purchase[]> {
   if (!isTreasuryConfigured) return []
 
-  const connection = getConnection()
   const treasury = new PublicKey(TREASURY_WALLET)
 
-  const signatures = await connection.getSignaturesForAddress(treasury, {
-    limit,
-  })
+  const signatures = await withRpcFallback((c) =>
+    c.getSignaturesForAddress(treasury, { limit }),
+  )
 
   const purchases: Purchase[] = []
   const chunkSize = 20
 
   for (let i = 0; i < signatures.length; i += chunkSize) {
     const chunk = signatures.slice(i, i + chunkSize)
-    const txs = await connection.getParsedTransactions(
-      chunk.map((s) => s.signature),
-      { maxSupportedTransactionVersion: 0 },
+    const txs = await withRpcFallback((c) =>
+      c.getParsedTransactions(
+        chunk.map((s) => s.signature),
+        { maxSupportedTransactionVersion: 0 },
+      ),
     )
 
     for (let j = 0; j < txs.length; j++) {
@@ -118,12 +117,17 @@ export async function fetchPurchases(limit = 200): Promise<Purchase[]> {
         'unknown'
 
       purchases.push({
-        ...decoded,
+        x: decoded.x,
+        y: decoded.y,
+        w: decoded.w,
+        h: decoded.h,
+        name: decoded.name,
+        url: decoded.url,
         buyer,
         signature: sig,
         solAmount,
         timestamp: (tx.blockTime ?? 0) * 1000,
-        color: colorFromSeed(sig),
+        color: decoded.color ?? colorFromSeed(sig),
       })
     }
   }

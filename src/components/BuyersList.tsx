@@ -10,10 +10,10 @@ export function BuyersList({ purchases, loading }: Props) {
 
   return (
     <section className="buyers panel">
-      <h2>Letzte Käufer</h2>
-      {loading && <p className="muted">Lade On-Chain-Daten…</p>}
+      <h2>Recent buyers</h2>
+      {loading && <p className="muted">Loading on-chain data…</p>}
       {!loading && recent.length === 0 && (
-        <p className="muted">Noch keine Käufe – sei der Erste!</p>
+        <p className="muted">No purchases yet — be the first!</p>
       )}
       <ul className="buyers-list">
         {recent.map((p) => (

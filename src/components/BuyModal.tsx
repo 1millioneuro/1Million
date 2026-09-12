@@ -8,6 +8,7 @@ import {
   solForSelection,
 } from '../lib/solana'
 import { isTreasuryConfigured, SOL_PER_PIXEL, TREASURY_WALLET } from '../config'
+import { DEFAULT_PIXEL_COLOR, normalizeHexColor } from '../lib/colors'
 import type { Selection } from '../types'
 
 interface Props {
@@ -17,12 +18,18 @@ interface Props {
   onSuccess: (signature: string) => void
 }
 
+function toColorInputValue(hex: string): string {
+  return hex.toLowerCase()
+}
+
 export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
   const { publicKey, sendTransaction, connected, connecting } = useWallet()
   const { connection } = useConnection()
   const { setVisible } = useWalletModal()
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const [color, setColor] = useState(DEFAULT_PIXEL_COLOR)
+  const [hexDraft, setHexDraft] = useState(DEFAULT_PIXEL_COLOR)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,15 +40,32 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
   const treasuryOk = isTreasuryConfigured
 
   const canPay = useMemo(
-    () => treasuryOk && connected && !hasOwned && pixels > 0 && !busy,
-    [treasuryOk, connected, hasOwned, pixels, busy],
+    () =>
+      treasuryOk &&
+      connected &&
+      !hasOwned &&
+      pixels > 0 &&
+      !busy &&
+      !!normalizeHexColor(color),
+    [treasuryOk, connected, hasOwned, pixels, busy, color],
   )
+
+  function applyColor(next: string, fromPicker = false) {
+    // While typing, only commit 6-digit hex so "#E11" does not become "#EE1111".
+    const normalized = normalizeHexColor(next, { allowShort: fromPicker })
+    if (normalized) {
+      setColor(normalized)
+      setHexDraft(normalized)
+    } else {
+      setHexDraft(next)
+    }
+  }
 
   async function pay() {
     setError(null)
     if (!treasuryOk) {
       setError(
-        'Treasury-Wallet fehlt. Setze VITE_TREASURY_WALLET auf deine Phantom-Adresse.',
+        'Treasury wallet is missing. Set VITE_TREASURY_WALLET to your Phantom address.',
       )
       return
     }
@@ -50,18 +74,28 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
       return
     }
     if (hasOwned) {
-      setError('Auswahl enthält bereits verkaufte Pixel.')
+      setError('This selection includes pixels that are already sold.')
+      return
+    }
+    const hex = normalizeHexColor(color)
+    if (!hex) {
+      setError('Pick a valid hex color (e.g. #58A6FF).')
       return
     }
     setBusy(true)
     try {
-      const tx = await buildPurchaseTransaction(publicKey, selection, name, url)
+      const tx = await buildPurchaseTransaction(
+        publicKey,
+        selection,
+        name,
+        url,
+        hex,
+      )
       const sig = await sendTransaction(tx, connection)
       await connection.confirmTransaction(sig, 'confirmed')
       onSuccess(sig)
     } catch (e) {
-      const msg =
-        e instanceof Error ? e.message : 'Transaktion fehlgeschlagen'
+      const msg = e instanceof Error ? e.message : 'Transaction failed'
       setError(msg)
     } finally {
       setBusy(false)
@@ -77,33 +111,71 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
         aria-labelledby="buy-title"
       >
         <header className="modal-header">
-          <h2 id="buy-title">Pixel kaufen</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Schließen">
+          <h2 id="buy-title">Buy pixels</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close">
             ×
           </button>
         </header>
 
         <p className="modal-sel">
-          Auswahl:{' '}
+          Selection:{' '}
           <strong>
             ({selection.x}, {selection.y}) · {selection.w}×{selection.h}
           </strong>{' '}
-          = <strong>{pixels.toLocaleString('de-DE')} Pixel</strong>
+          = <strong>{pixels.toLocaleString('en-US')} pixels</strong>
         </p>
 
         {hasOwned && (
           <p className="banner warn">
-            Diese Fläche enthält bereits verkaufte Pixel. Bitte neu auswählen.
+            This area already has sold pixels. Please select a free rectangle.
           </p>
         )}
 
         {!treasuryOk && (
           <p className="banner warn">
-            Wallet-Adresse noch nicht gesetzt (
-            <code>{TREASURY_WALLET}</code>). Michael muss{' '}
-            <code>VITE_TREASURY_WALLET</code> konfigurieren.
+            Wallet address is not set yet (
+            <code>{TREASURY_WALLET}</code>). Configure{' '}
+            <code>VITE_TREASURY_WALLET</code> before purchases can go live.
           </p>
         )}
+
+        <label className="field">
+          <span>Pixel color</span>
+          <div className="color-row">
+            <input
+              type="color"
+              value={toColorInputValue(color)}
+              onChange={(e) => applyColor(e.target.value, true)}
+              aria-label="Color picker"
+            />
+            <input
+              value={hexDraft}
+              onChange={(e) => applyColor(e.target.value)}
+              onBlur={() => {
+                const normalized = normalizeHexColor(hexDraft, { allowShort: true })
+                if (normalized) {
+                  setColor(normalized)
+                  setHexDraft(normalized)
+                } else {
+                  setHexDraft(color)
+                }
+              }}
+              maxLength={7}
+              spellCheck={false}
+              placeholder="#58A6FF"
+              aria-label="Hex color"
+            />
+            <span
+              className="color-swatch"
+              style={{ background: color }}
+              title={`${selection.w}×${selection.h} at ${color}`}
+            />
+          </div>
+          <span className="tiny">
+            The same color is applied to every pixel in this purchase so
+            neighboring buys can form images.
+          </span>
+        </label>
 
         <label className="field">
           <span>Name (optional)</span>
@@ -111,7 +183,7 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={40}
-            placeholder="Dein Name / Projekt"
+            placeholder="Your name / project"
           />
         </label>
         <label className="field">
@@ -126,9 +198,9 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
 
         <div className="price-box">
           <div>
-            <span className="muted">Preis</span>
+            <span className="muted">Price</span>
             <strong>
-              {eur.toLocaleString('de-DE', {
+              {eur.toLocaleString('en-US', {
                 style: 'currency',
                 currency: 'EUR',
               })}
@@ -150,7 +222,7 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
               disabled={connecting}
               onClick={() => setVisible(true)}
             >
-              {connecting ? 'Verbinde…' : 'Phantom verbinden'}
+              {connecting ? 'Connecting…' : 'Connect Phantom'}
             </button>
           ) : (
             <button
@@ -159,16 +231,16 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
               disabled={!canPay}
               onClick={() => void pay()}
             >
-              {busy ? 'Zahlung läuft…' : `Mit Phantom zahlen`}
+              {busy ? 'Paying…' : 'Pay with Phantom'}
             </button>
           )}
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Abbrechen
+            Cancel
           </button>
         </div>
         <p className="muted tiny">
-          Die Zahlung geht on-chain an die Treasury. Kaufdaten (Koordinaten,
-          Name, URL) stehen im Solana-Memo.
+          Payment goes on-chain to the treasury. Purchase data (coordinates,
+          color, name, URL) is stored in the Solana memo.
         </p>
       </div>
     </div>

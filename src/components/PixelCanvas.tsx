@@ -278,14 +278,14 @@ export function PixelCanvas({ ownerMap, onSelect, getOwner }: Props) {
         onContextMenu={(e) => e.preventDefault()}
       />
       <div className="canvas-hint">
-        Ziehen = auswählen · Shift/Rechtsklick = verschieben · Scroll = Zoom
+        Drag = select · Shift/right-click = pan · Scroll = zoom
       </div>
       {hover && (
         <div className="hover-tooltip">
           ({hover.x}, {hover.y})
           {hover.purchase
-            ? ` · ${hover.purchase.name || 'Anonym'} · ${hover.purchase.w}×${hover.purchase.h}`
-            : ' · frei'}
+            ? ` · ${hover.purchase.name || 'Anonymous'} · ${hover.purchase.w}×${hover.purchase.h}`
+            : ' · free'}
         </div>
       )}
     </div>

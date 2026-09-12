@@ -1,24 +1,24 @@
-# EineMillion
+# OneMillion (EineMillion)
 
-Soziales Experiment: **1.000.000 Pixel à 1 €** – Ziel **1.000.000 €**.  
-Zahlungen über **Phantom (Solana)** an eine öffentliche Treasury-Wallet.  
-Reine **Static-Site** (Vite + React + TypeScript) – kein bezahltes Backend, keine Datenbank.
+Social experiment: **1,000,000 pixels at €1** — goal **€1,000,000**.  
+Payments via **Phantom (Solana)** to a public treasury wallet.  
+Pure **static site** (Vite + React + TypeScript) — no paid backend, no database.
 
 ## Features
 
-- Landing mit großem Fortschritt (Pixel, €-Schätzung, %)
-- 1000×1000-Grid auf **HTML-Canvas** (Pan/Zoom/Rechteck-Auswahl, keine 1M DOM-Nodes)
-- Kauf-Modal: optional Name + URL, €- und SOL-Summe, Phantom Connect + Transfer + **Memo**
-- Ownership aus Transfers **an die Treasury** (öffentliche Solana-RPC), In-Memory-Cache
-- Teilen: Link kopieren + X-Intent (kein Auto-Posting)
-- Dunkles, mobiles UI (Deutsch)
+- Landing with a large progress bar (pixels, € estimate, %)
+- 1000×1000 grid on an **HTML canvas** (pan/zoom/rectangle select, no 1M DOM nodes)
+- Buy modal: color picker, optional name + URL, € and SOL totals, Phantom connect + transfer + **Memo**
+- Ownership reconstructed from transfers **to the treasury** (public Solana RPCs with fallback + retry)
+- Share: copy link + X intent (no auto-posting)
+- Dark, mobile UI (English)
 
 ## Setup
 
 ```bash
 cd einemillion
 cp .env.example .env
-# .env bearbeiten – siehe unten
+# edit .env — see below
 npm install
 npm run dev
 ```
@@ -30,56 +30,63 @@ npm run build
 npm run preview
 ```
 
-### Umgebungsvariablen
+Production builds (`vite build`) automatically load `.env.production`.
 
-| Variable | Bedeutung |
-|----------|-----------|
-| `VITE_TREASURY_WALLET` | Phantom-Empfangsadresse (Base58). Placeholder: `REPLACE_WITH_PHANTOM_ADDRESS` |
-| `VITE_SOL_PER_PIXEL` | SOL pro Pixel (Default `0.005`). **Michael setzt den realen €1≈SOL-Kurs** |
-| `VITE_SOLANA_RPC` | Optional eigener RPC (sonst `https://api.mainnet-beta.solana.com`) |
+### Environment variables
 
-**Kurs-Beispiel:** Wenn 1 SOL ≈ 200 €, dann `VITE_SOL_PER_PIXEL=0.005` (≈ 1 €). Vor Launch den aktuellen EUR/SOL-Kurs prüfen und anpassen.
+| Variable | Meaning |
+|----------|---------|
+| `VITE_TREASURY_WALLET` | Phantom receive address (Base58). Placeholder: `REPLACE_WITH_PHANTOM_ADDRESS` |
+| `VITE_SOL_PER_PIXEL` | SOL per pixel (Default `0.005`). Set the live €1≈SOL rate before launch |
+| `VITE_SOLANA_RPC` | Optional custom RPC (otherwise public fallbacks, starting with PublicNode) |
 
-## Deploy (kostenlos)
+**Rate example:** If 1 SOL ≈ 87 €, then `VITE_SOL_PER_PIXEL=0.0115` (≈ €1). Recheck EUR/SOL before launch.
+
+## Deploy (free)
 
 ### Cloudflare Pages
 
-1. Repo verbinden oder `dist/` hochladen  
-2. Build-Command: `npm run build`  
-3. Output-Directory: `dist`  
-4. Environment Variables in Pages setzen (`VITE_TREASURY_WALLET`, `VITE_SOL_PER_PIXEL`)  
+1. Connect the repo or upload `dist/`
+2. Build command: `npm run build`
+3. Output directory: `dist`
+4. Set environment variables (`VITE_TREASURY_WALLET`, `VITE_SOL_PER_PIXEL`)
 5. Deploy
 
 ### GitHub Pages
 
-1. `base: './'` ist in `vite.config.ts` gesetzt (relative Pfade)  
-2. Actions oder manuell: `npm run build` → Inhalt von `dist/` in `gh-pages` Branch  
-3. Oder: Settings → Pages → Deploy from GitHub Actions  
+1. `base: '/1Million/'` is set in `vite.config.ts`
+2. The `Deploy GitHub Pages` workflow runs `npm ci && npm run build` on `main` (production mode, so `.env.production` is baked in)
+3. Or: Settings → Pages → Deploy from GitHub Actions
 
-Beispiel Workflow-Idee: Node 20, `npm ci && npm run build`, Artifact `dist`.
+## On-chain purchase (Memo)
 
-## On-Chain-Kauf (Memo)
+Program: Solana Memo (`MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXkDLWxDzu`).  
+Plus a SOL transfer to the treasury.
 
-Memo-Format: `EM1:x,y,w,h|name|url`  
-Program: Solana Memo (`MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXkDLWxDzu`)  
-Zusätzlich: SOL-Transfer an die Treasury.
+Memo format:
 
-Ownership: chronologisch **First-Wins** (ältere gültige Memos behalten Pixel).
+- **Current:** `EM1:x,y,w,h|#RRGGBB|name|url`
+- **Legacy (still parsed):** `EM1:x,y,w,h|name|url`
 
-## Limitierungen (Free-RPC)
+Color is one hex value for the whole purchased rectangle (`#RGB` or `#RRGGBB`).  
+If a memo has no color field, the canvas falls back to a hash color from the transaction signature.
 
-- Öffentliche Solana-RPCs **rate-limitieren** stark → Käufe/History können zeitweise fehlschlagen  
-- Nur die letzten ~N Signatures werden geladen (kein vollständiger Index ohne Indexer)  
-- Kein Server = kein persistenter Cache über Sessions hinweg (nur In-Memory im Tab)  
-- Für Produktion: kostenlosen Helius-/QuickNode-Endpoint in `VITE_SOLANA_RPC` setzen  
+Ownership: chronological **first-wins** (older valid memos keep their pixels).
 
-## Wichtig vor Go-Live
+## Limitations (free RPC)
 
-1. Echte Phantom-Adresse in `VITE_TREASURY_WALLET`  
-2. Realen SOL/EUR-Kurs in `VITE_SOL_PER_PIXEL`  
-3. Optional eigenen RPC setzen  
-4. Rechtliches/Transparenzhinweise prüfen (soziales Experiment, keine Anlageberatung)
+- Public Solana RPCs **rate-limit** — the UI soft-fails (muted notice + quiet retry / endpoint fallback) instead of blocking the page
+- Only the last ~N signatures are loaded (no full index without an indexer)
+- No server = no persistent cache across sessions (in-memory in the tab only)
+- For production volume: put a free Helius/QuickNode URL in `VITE_SOLANA_RPC`
 
-## Lizenz / Hinweis
+## Before go-live
 
-Hobby-/Experiment-Projekt. Zahlungen sind finale On-Chain-Transfers.
+1. Real Phantom address in `VITE_TREASURY_WALLET`
+2. Real SOL/EUR rate in `VITE_SOL_PER_PIXEL`
+3. Optional dedicated RPC
+4. Review legal / transparency copy (social experiment, not investment advice)
+
+## License / note
+
+Hobby / experiment project. Payments are final on-chain transfers.

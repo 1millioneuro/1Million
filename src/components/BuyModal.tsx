@@ -50,8 +50,9 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
     [treasuryOk, connected, hasOwned, pixels, busy, color],
   )
 
-  function applyColor(next: string) {
-    const normalized = normalizeHexColor(next)
+  function applyColor(next: string, fromPicker = false) {
+    // While typing, only commit 6-digit hex so "#E11" does not become "#EE1111".
+    const normalized = normalizeHexColor(next, { allowShort: fromPicker })
     if (normalized) {
       setColor(normalized)
       setHexDraft(normalized)
@@ -144,14 +145,14 @@ export function BuyModal({ selection, hasOwned, onClose, onSuccess }: Props) {
             <input
               type="color"
               value={toColorInputValue(color)}
-              onChange={(e) => applyColor(e.target.value)}
+              onChange={(e) => applyColor(e.target.value, true)}
               aria-label="Color picker"
             />
             <input
               value={hexDraft}
               onChange={(e) => applyColor(e.target.value)}
               onBlur={() => {
-                const normalized = normalizeHexColor(hexDraft)
+                const normalized = normalizeHexColor(hexDraft, { allowShort: true })
                 if (normalized) {
                   setColor(normalized)
                   setHexDraft(normalized)

@@ -15,12 +15,18 @@ export function colorFromSeed(seed: string): string {
 }
 
 /** Accept #RGB or #RRGGBB; return canonical #RRGGBB or null. */
-export function normalizeHexColor(input: string): string | null {
+export function normalizeHexColor(
+  input: string,
+  opts?: { allowShort?: boolean },
+): string | null {
   const s = input.trim()
-  const short = /^#([0-9A-Fa-f]{3})$/.exec(s)
-  if (short) {
-    const [r, g, b] = short[1]
-    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase()
+  const allowShort = opts?.allowShort !== false
+  if (allowShort) {
+    const short = /^#([0-9A-Fa-f]{3})$/.exec(s)
+    if (short) {
+      const [r, g, b] = short[1]
+      return `#${r}${r}${g}${g}${b}${b}`.toUpperCase()
+    }
   }
   const full = /^#([0-9A-Fa-f]{6})$/.exec(s)
   if (full) return `#${full[1]}`.toUpperCase()

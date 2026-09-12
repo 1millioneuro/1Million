@@ -38,7 +38,7 @@ Production builds (`vite build`) automatically load `.env.production`.
 |----------|---------|
 | `VITE_TREASURY_WALLET` | Phantom receive address (Base58). Placeholder: `REPLACE_WITH_PHANTOM_ADDRESS` |
 | `VITE_SOL_PER_PIXEL` | SOL per pixel (Default `0.005`). Set the live €1≈SOL rate before launch |
-| `VITE_SOLANA_RPC` | Optional custom RPC (otherwise public fallbacks, starting with PublicNode) |
+| `VITE_SOLANA_RPC` | Optional custom RPC. **Do not use `api.mainnet-beta.solana.com` in the browser** (JSON-RPC 403). Default fallbacks: PublicNode, then LeoRPC |
 
 **Rate example:** If 1 SOL ≈ 87 €, then `VITE_SOL_PER_PIXEL=0.0115` (≈ €1). Recheck EUR/SOL before launch.
 
@@ -75,10 +75,11 @@ Ownership: chronological **first-wins** (older valid memos keep their pixels).
 
 ## Limitations (free RPC)
 
-- Public Solana RPCs **rate-limit** — the UI soft-fails (muted notice + quiet retry / endpoint fallback) instead of blocking the page
+- Official `api.mainnet-beta.solana.com` returns **403 Access forbidden** from browsers (GitHub Pages included) — the site never uses it as the sole RPC
+- Browser calls use CORS-friendly PublicNode / LeoRPC with a `text/plain` JSON body (avoids preflight issues). Failures show a muted notice + retry, not a red banner
 - Only the last ~N signatures are loaded (no full index without an indexer)
 - No server = no persistent cache across sessions (in-memory in the tab only)
-- For production volume: put a free Helius/QuickNode URL in `VITE_SOLANA_RPC`
+- For production volume: put a dedicated Helius/QuickNode URL in `VITE_SOLANA_RPC`
 
 ## Before go-live
 

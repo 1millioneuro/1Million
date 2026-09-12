@@ -30,6 +30,7 @@ jobs:
         env:
           VITE_TREASURY_WALLET: GXoU9jG9G4iGrquMLfyMvUuzW6Rvn2t5nGSC1UWg5y57
           VITE_SOL_PER_PIXEL: '0.0115'
+          VITE_SOLANA_RPC: https://solana-rpc.publicnode.com
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

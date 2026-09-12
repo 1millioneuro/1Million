@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Connection } from '@solana/web3.js'
 import {
   ConnectionProvider,
   WalletProvider as SolanaWalletProvider,
@@ -7,7 +6,13 @@ import {
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom'
 import { SOLANA_RPC, SOLANA_RPC_ENDPOINTS } from '../config'
+import { browserRpcFetch, createConnection } from '../lib/rpc'
 import '@solana/wallet-adapter-react-ui/styles.css'
+
+const connectionConfig = {
+  commitment: 'confirmed' as const,
+  fetch: browserRpcFetch,
+}
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const wallets = useMemo(() => [new PhantomWalletAdapter()], [])
@@ -18,12 +23,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     async function pickHealthy() {
       for (const url of SOLANA_RPC_ENDPOINTS) {
         try {
-          const c = new Connection(url, 'confirmed')
-          await c.getLatestBlockhash('confirmed')
+          const c = createConnection(url)
+          await c.getSlot('confirmed')
           if (!cancelled) setEndpoint(url)
           return
         } catch {
-          // try next public endpoint
+          // official / keyless 403s skip immediately
         }
       }
     }
@@ -34,7 +39,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider endpoint={endpoint} config={connectionConfig}>
       <SolanaWalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </SolanaWalletProvider>

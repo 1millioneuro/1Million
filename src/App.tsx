@@ -20,7 +20,7 @@ export default function App() {
     ownerMap,
     pixelsSold,
     loading,
-    error,
+    notice,
     refresh,
     getOwner,
     selectionHasOwned,
@@ -35,7 +35,7 @@ export default function App() {
 
   function handleSuccess(sig: string) {
     setSelection(null)
-    setToast(`Kauf erfolgreich! Tx: ${sig.slice(0, 8)}…`)
+    setToast(`Purchase confirmed! Tx: ${sig.slice(0, 8)}…`)
     void refresh(true)
     setTimeout(() => setToast(null), 6000)
   }
@@ -46,8 +46,8 @@ export default function App() {
         <div className="brand">
           <span className="logo">1M</span>
           <div>
-            <h1>EineMillion</h1>
-            <p className="tagline">Soziales Experiment · 1 Pixel = 1 €</p>
+            <h1>OneMillion</h1>
+            <p className="tagline">1,000,000 Pixels · €1,000,000</p>
           </div>
         </div>
         <div className="topbar-actions">
@@ -57,11 +57,11 @@ export default function App() {
 
       <main className="layout">
         <section className="hero panel">
-          <h2>1.000.000 Pixel. Ziel: 1.000.000 €</h2>
+          <h2>1,000,000 pixels. Goal: €1,000,000</h2>
           <p>
-            Ein soziales Experiment: Kaufe ab <strong>1 €</strong> (1 Pixel) –
-            mehr ist erlaubt. Alle Zahlungen laufen transparent über{' '}
-            <strong>Phantom (Solana)</strong> an eine öffentliche Treasury.
+            A social experiment: buy from <strong>€1</strong> (1 pixel) —
+            more is welcome. Every payment is a transparent{' '}
+            <strong>Phantom (Solana)</strong> transfer to a public treasury.
           </p>
           <ProgressBar pixelsSold={pixelsSold} />
           <div className="hero-meta">
@@ -72,40 +72,47 @@ export default function App() {
               onClick={() => void refresh(true)}
               disabled={loading}
             >
-              {loading ? 'Aktualisiere…' : 'On-Chain aktualisieren'}
+              {loading ? 'Refreshing…' : 'Refresh on-chain'}
             </button>
           </div>
           {isTreasuryConfigured ? (
             <p className="transparency">
-              Transparenz:{' '}
+              Transparency:{' '}
               <a
                 href={`https://solscan.io/account/${TREASURY_WALLET}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Treasury auf Solscan ansehen ↗
+                View treasury on Solscan ↗
               </a>
             </p>
           ) : (
             <p className="banner warn">
-              Demo-Modus: Treasury-Wallet noch nicht gesetzt. Käufe sind
-              deaktiviert, bis <code>VITE_TREASURY_WALLET</code> konfiguriert
-              ist.
+              Demo mode: treasury wallet is not set. Purchases stay disabled
+              until <code>VITE_TREASURY_WALLET</code> is configured.
             </p>
           )}
-          {error && (
-            <p className="banner error">
-              RPC: {error} (öffentliche RPCs sind oft limitiert)
+          {notice && (
+            <p className="banner info">
+              {notice}{' '}
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() => void refresh(true)}
+                disabled={loading}
+              >
+                Retry now
+              </button>
             </p>
           )}
         </section>
 
         <section className="grid-section panel">
           <div className="grid-header">
-            <h2>Pixel-Grid (1000×1000)</h2>
+            <h2>Pixel grid (1000×1000)</h2>
             <p className="muted">
-              Rechteck aufziehen zum Kaufen · {pixelsSold.toLocaleString('de-DE')} /{' '}
-              {TOTAL_PIXELS.toLocaleString('de-DE')} verkauft
+              Drag a rectangle to buy · {pixelsSold.toLocaleString('en-US')} /{' '}
+              {TOTAL_PIXELS.toLocaleString('en-US')} sold
             </p>
           </div>
           <PixelCanvas
@@ -120,8 +127,8 @@ export default function App() {
 
       <footer className="footer">
         <p>
-          EineMillion – soziales Experiment. Kein Investmentversprechen. Zahlungen
-          sind finale On-Chain-Transfers.
+          OneMillion — a social experiment. Not an investment offer. Payments
+          are final on-chain transfers.
         </p>
       </footer>
 

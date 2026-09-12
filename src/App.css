@@ -290,6 +290,12 @@
   color: #ff7b72;
 }
 
+.banner.info {
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px solid rgba(88, 166, 255, 0.28);
+  color: var(--muted);
+}
+
 .muted {
   color: var(--muted);
 }
@@ -361,6 +367,50 @@
   border-radius: 0.5rem;
   padding: 0.6rem 0.75rem;
   font: inherit;
+}
+
+.color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.color-row input[type='color'] {
+  width: 2.75rem;
+  height: 2.4rem;
+  padding: 0.12rem;
+  cursor: pointer;
+}
+
+.color-row input[type='text'],
+.color-row input:not([type='color']) {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.color-swatch {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.link-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .price-box {

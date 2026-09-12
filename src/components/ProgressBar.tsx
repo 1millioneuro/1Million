@@ -12,18 +12,18 @@ export function ProgressBar({ pixelsSold }: Props) {
     <div className="progress-block">
       <div className="progress-stats">
         <div>
-          <span className="stat-value">{pixelsSold.toLocaleString('de-DE')}</span>
-          <span className="stat-label"> / 1.000.000 Pixel</span>
+          <span className="stat-value">{pixelsSold.toLocaleString('en-US')}</span>
+          <span className="stat-label"> / 1,000,000 pixels</span>
         </div>
         <div>
           <span className="stat-value">
-            {eur.toLocaleString('de-DE', {
+            {eur.toLocaleString('en-US', {
               style: 'currency',
               currency: 'EUR',
               maximumFractionDigits: 0,
             })}
           </span>
-          <span className="stat-label"> von 1.000.000 €</span>
+          <span className="stat-label"> of €1,000,000</span>
         </div>
         <div>
           <span className="stat-value">{pct.toFixed(2)}%</span>

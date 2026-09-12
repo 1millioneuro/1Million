@@ -22,18 +22,33 @@ function applyOwnership(purchases: Purchase[]): OwnerMap {
   return map
 }
 
+const CACHE_MS = 60_000
+const RETRY_BASE_MS = 8_000
+const RETRY_MAX_MS = 60_000
+
 export function useOwnership() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const cacheRef = useRef<{ at: number; data: Purchase[] } | null>(null)
-  const CACHE_MS = 60_000
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const attemptRef = useRef(0)
+  const inflightRef = useRef(false)
 
-  const refresh = useCallback(async (force = false) => {
+  const clearRetry = () => {
+    if (retryRef.current) {
+      clearTimeout(retryRef.current)
+      retryRef.current = null
+    }
+  }
+
+  const refresh = useCallback(async function refreshOwnership(force = false) {
     if (!isTreasuryConfigured) {
       setPurchases([])
+      setNotice(null)
       return
     }
+    if (inflightRef.current) return
     const now = Date.now()
     if (
       !force &&
@@ -43,22 +58,38 @@ export function useOwnership() {
       setPurchases(cacheRef.current.data)
       return
     }
+    inflightRef.current = true
     setLoading(true)
-    setError(null)
     try {
       const data = await fetchPurchases(150)
       cacheRef.current = { at: Date.now(), data }
       setPurchases(data)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'RPC-Fehler'
-      setError(msg)
+      setNotice(null)
+      attemptRef.current = 0
+      clearRetry()
+    } catch {
+      attemptRef.current += 1
+      // Keep last good data; never block the page on public-RPC flakes.
+      setNotice(
+        'Ownership map is temporarily delayed (public RPC). The grid stays usable — retrying quietly.',
+      )
+      clearRetry()
+      const delay = Math.min(
+        RETRY_MAX_MS,
+        RETRY_BASE_MS * 2 ** Math.min(attemptRef.current - 1, 3),
+      )
+      retryRef.current = setTimeout(() => {
+        void refreshOwnership(true)
+      }, delay)
     } finally {
+      inflightRef.current = false
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     void refresh()
+    return () => clearRetry()
   }, [refresh])
 
   const ownerMap = useMemo(() => applyOwnership(purchases), [purchases])
@@ -90,7 +121,7 @@ export function useOwnership() {
     ownerMap,
     pixelsSold,
     loading,
-    error,
+    notice,
     refresh,
     isOwned,
     getOwner,
